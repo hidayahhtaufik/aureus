@@ -1,0 +1,12 @@
+# Aureus Protocol — Research Notes
+
+**Project:** TalosFacilitator (x402 Facilitator for Arc Network)
+**Phase:** v0.1 Research
+**Last Updated:** 2026-05-08
+
+---
+
+## 1. Goal
+
+Enable [x402](https://x402.org) HTTP-native micropayments on [Arc Network](https://arc.network) — Circle's stablecoin-native L1 — by building the first community facilitator implementation. Currently x402 supports Base, Solana, Algorand, Stellar, but NOT Arc.
+

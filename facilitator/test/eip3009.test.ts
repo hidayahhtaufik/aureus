@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decodeSignature } from "../src/lib/eip3009.js";
+import { decodeSignature } from "@auranode/x402-arc";
 
 const R_HEX = "1".repeat(64);
 const S_HEX = "2".repeat(64);
@@ -11,7 +11,7 @@ function makeSig(vByteHex: string): `0x${string}` {
 
 describe("decodeSignature", () => {
   it("decodes a v=27 signature into r/s/v", () => {
-    const sig = makeSig("1b"); // 0x1b = 27
+    const sig = makeSig("1b");
     const decoded = decodeSignature(sig);
     expect(decoded.r).toBe(`0x${R_HEX}`);
     expect(decoded.s).toBe(`0x${S_HEX}`);
@@ -19,7 +19,7 @@ describe("decodeSignature", () => {
   });
 
   it("decodes a v=28 signature into r/s/v", () => {
-    const sig = makeSig("1c"); // 0x1c = 28
+    const sig = makeSig("1c");
     const decoded = decodeSignature(sig);
     expect(decoded.v).toBe(28);
   });
@@ -52,13 +52,12 @@ describe("decodeSignature", () => {
   });
 
   it("throws on v that does not normalize to 27 or 28", () => {
-    // v = 0xff = 255 → after normalization unchanged → invalid
     const sig = makeSig("ff");
     expect(() => decodeSignature(sig)).toThrow(/Invalid v value/);
   });
 
   it("preserves r and s exactly (no leading-zero stripping)", () => {
-    const r0 = "0".repeat(63) + "a"; // 0x000...0a
+    const r0 = "0".repeat(63) + "a";
     const s0 = "0".repeat(63) + "b";
     const sig = `0x${r0}${s0}1b` as `0x${string}`;
     const decoded = decodeSignature(sig);

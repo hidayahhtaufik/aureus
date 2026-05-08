@@ -1,15 +1,18 @@
 /**
- * EIP-712 typed-data construction and signature recovery for x402 EIP-3009 path.
+ * EIP-712 typed-data construction and signature recovery for x402 EIP-3009.
+ *
+ * The TYPES below MUST exactly match Circle's USDC v2 contract type definitions
+ * — any deviation produces signatures the contract will reject on-chain.
  */
 
 import { recoverTypedDataAddress, getAddress } from "viem";
 import type { Address, Hex } from "viem";
-import { USDC_EIP712_DOMAIN } from "../config/arc.js";
-import type { Eip3009Authorization } from "../types/x402.js";
+
+import { USDC_EIP712_DOMAIN } from "./constants.js";
+import type { Eip3009Authorization } from "./types.js";
 
 /**
- * EIP-712 type definition for `TransferWithAuthorization`.
- * MUST exactly match Circle's USDC v2 contract types or signatures will fail.
+ * Canonical EIP-712 type definition for `TransferWithAuthorization`.
  */
 export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
   TransferWithAuthorization: [
@@ -21,6 +24,10 @@ export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
     { name: "nonce", type: "bytes32" },
   ],
 } as const;
+
+export type SignerRecoveryResult =
+  | { ok: true; signer: Address }
+  | { ok: false; error: string };
 
 /**
  * Recover the EOA that signed the EIP-712 TransferWithAuthorization message.
@@ -35,8 +42,7 @@ export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
 export async function recoverEip3009Signer(
   authorization: Eip3009Authorization,
   signature: Hex
-): Promise<{ ok: true; signer: Address } | { ok: false; error: string }> {
-  // Validate signature length (65 bytes = 130 hex chars + 0x prefix = 132)
+): Promise<SignerRecoveryResult> {
   if (signature.length !== 132) {
     return {
       ok: false,

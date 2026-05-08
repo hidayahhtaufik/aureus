@@ -2,22 +2,28 @@
  * x402 payment verification logic for the EIP-3009 path on Arc.
  *
  * Pure verification (no on-chain writes). Used by both /verify and /settle
- * endpoints. /verify returns this result directly; /settle proceeds to
- * broadcast only if verification passes.
+ * endpoints.
  */
 
 import { getAddress } from "viem";
 import type { Address, Hex } from "viem";
 
+import {
+  ARC_CAIP2,
+  USDC_TOKEN,
+  recoverEip3009Signer,
+  signerMatchesAuthorizer,
+  type Eip3009Authorization,
+  type PaymentRequirements,
+  type X402PaymentPayloadEnvelope,
+} from "@auranode/x402-arc";
+
 import { publicClient } from "./arc-client.js";
-import { recoverEip3009Signer, signerMatchesAuthorizer } from "./eip712.js";
 import { USDC_ABI } from "./usdc-abi.js";
-import { ARC_CAIP2, USDC_TOKEN } from "../config/arc.js";
-import type {
-  Eip3009Authorization,
-  PaymentPayload,
-  PaymentRequirements,
-} from "../types/x402.js";
+
+// Re-export the envelope type under the historical name so existing route /
+// test imports keep working.
+export type X402PaymentPayload = X402PaymentPayloadEnvelope;
 
 export type VerifyOk = {
   ok: true;
@@ -34,21 +40,11 @@ export type VerifyFail = {
 export type VerifyResult = VerifyOk | VerifyFail;
 
 /**
- * The outer x402 payment payload wrapper (scheme, network, payload).
- */
-export type X402PaymentPayload = {
-  x402Version: number;
-  scheme: "exact";
-  network: string;
-  payload: PaymentPayload;
-};
-
-/**
  * Run all verification checks against an x402 payment payload.
  *
- * Steps (in order — fast-fail on first failure):
+ * Steps (fast-fail on first failure):
  *   1. Outer scheme matches "exact"
- *   2. Outer network matches Arc testnet (eip155:5042002)
+ *   2. Outer network matches Arc testnet
  *   3. Requirements scheme/network match
  *   4. Requirements asset address matches Arc USDC
  *   5. Recipient (authorization.to) matches requirements.payTo
@@ -59,7 +55,7 @@ export type X402PaymentPayload = {
  *  10. Authorization nonce has not been used
  */
 export async function verifyPayment(
-  outerPayload: X402PaymentPayload,
+  outerPayload: X402PaymentPayloadEnvelope,
   requirements: PaymentRequirements
 ): Promise<VerifyResult> {
   const auth = outerPayload.payload.authorization;
@@ -112,10 +108,7 @@ export async function verifyPayment(
     return fail("Invalid bigint in value or maxAmountRequired", auth);
   }
   if (authValue < requiredAmount) {
-    return fail(
-      `Authorized value ${authValue} below required ${requiredAmount}`,
-      auth
-    );
+    return fail(`Authorized value ${authValue} below required ${requiredAmount}`, auth);
   }
 
   // 7. Time validity window
@@ -162,10 +155,7 @@ export async function verifyPayment(
     return fail(`Balance lookup failed: ${msg}`, auth);
   }
   if (balance < authValue) {
-    return fail(
-      `Insufficient balance: payer has ${balance}, needs ${authValue}`,
-      auth
-    );
+    return fail(`Insufficient balance: payer has ${balance}, needs ${authValue}`, auth);
   }
 
   // 10. Nonce reuse check (on-chain read)

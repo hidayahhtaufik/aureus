@@ -1,0 +1,70 @@
+{
+  "name": "@auranode/x402-arc",
+  "version": "0.1.0",
+  "description": "x402 protocol primitives for Arc Network — types, EIP-712 helpers, EIP-3009 signer, x402 client, and Express middleware.",
+  "keywords": [
+    "x402",
+    "arc-network",
+    "circle",
+    "stablecoin",
+    "usdc",
+    "eip-3009",
+    "agent-payments"
+  ],
+  "type": "module",
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./client": {
+      "types": "./src/client/index.ts",
+      "default": "./src/client/index.ts"
+    },
+    "./server": {
+      "types": "./src/server/index.ts",
+      "default": "./src/server/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "viem": "^2.21.55",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "express": "^4.21.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "auranode.xyz",
+  "homepage": "https://github.com/hidayahhtaufik/aureus",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hidayahhtaufik/aureus",
+    "directory": "packages/x402-arc"
+  }
+}

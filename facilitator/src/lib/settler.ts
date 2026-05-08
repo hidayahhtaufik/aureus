@@ -2,25 +2,25 @@
  * x402 settlement logic — broadcasts `transferWithAuthorization` on Arc.
  *
  * Flow:
- *   1. Run `verifyPayment` (re-uses verifier; no trusting the caller did it).
- *   2. If valid, decode the signature into v/r/s.
- *   3. Submit `transferWithAuthorization` from the facilitator wallet.
+ *   1. Run verifyPayment (re-runs the full check chain).
+ *   2. Decode the signature into v/r/s.
+ *   3. Pre-flight simulate, then submit transferWithAuthorization.
  *   4. Wait for the receipt; report success or revert reason.
- *
- * The facilitator wallet (FACILITATOR_PRIVATE_KEY) pays gas in USDC. The
- * payer's USDC moves to the recipient atomically via the on-chain call.
  */
 
 import { getAddress } from "viem";
 import type { Address } from "viem";
 
+import {
+  USDC_TOKEN,
+  decodeSignature,
+  type PaymentRequirements,
+  type X402PaymentPayloadEnvelope,
+} from "@auranode/x402-arc";
+
 import { publicClient, getWalletClient } from "./arc-client.js";
-import { decodeSignature } from "./eip3009.js";
 import { verifyPayment } from "./verifier.js";
-import type { X402PaymentPayload } from "./verifier.js";
 import { USDC_ABI } from "./usdc-abi.js";
-import { USDC_TOKEN } from "../config/arc.js";
-import type { PaymentRequirements } from "../types/x402.js";
 
 export type SettleOk = {
   ok: true;
@@ -40,7 +40,7 @@ export type SettleFail = {
 export type SettleResult = SettleOk | SettleFail;
 
 export async function settlePayment(
-  outerPayload: X402PaymentPayload,
+  outerPayload: X402PaymentPayloadEnvelope,
   requirements: PaymentRequirements
 ): Promise<SettleResult> {
   const network = outerPayload.network;
@@ -48,8 +48,6 @@ export async function settlePayment(
   // 1. Verify
   const verifyResult = await verifyPayment(outerPayload, requirements);
   if (!verifyResult.ok) {
-    // Conditional spread because `exactOptionalPropertyTypes: true` forbids
-    // assigning `undefined` to an optional property.
     return {
       ok: false,
       errorReason: `Verification failed: ${verifyResult.invalidReason}`,
@@ -90,7 +88,7 @@ export async function settlePayment(
     };
   }
 
-  // 4. Optional: simulate the call before broadcasting to catch likely reverts
+  // 4. Pre-flight simulation
   try {
     await publicClient.simulateContract({
       account: wallet.account,
@@ -148,12 +146,12 @@ export async function settlePayment(
     };
   }
 
-  // 6. Wait for receipt (Arc has sub-second finality, so this is usually <1s)
+  // 6. Wait for receipt
   try {
     const receipt = await publicClient.waitForTransactionReceipt({
       hash: txHash,
       confirmations: 1,
-      timeout: 30_000, // 30s safety net
+      timeout: 30_000,
     });
 
     if (receipt.status !== "success") {

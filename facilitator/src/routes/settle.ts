@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 
-import { VerifyRequestSchema } from "../types/x402.js";
-import type { SettleResponse } from "../types/x402.js";
+import {
+  ARC_CAIP2,
+  VerifyRequestSchema,
+  type SettleResponse,
+} from "@auranode/x402-arc";
+
 import { settlePayment } from "../lib/settler.js";
 import type { X402PaymentPayload } from "../lib/verifier.js";
-import { ARC_CAIP2 } from "../config/arc.js";
 
 export const settleRoute = new Hono();
 
@@ -13,12 +16,8 @@ export const settleRoute = new Hono();
  *
  * Validates AND settles an x402 payment payload on Arc by submitting
  * `transferWithAuthorization` from the facilitator wallet.
- *
- * Returns success only when the on-chain transaction is mined and its
- * receipt status is "success".
  */
 settleRoute.post("/", async (c) => {
-  // Parse + validate body shape
   const raw = await c.req.json().catch(() => null);
   const parsed = VerifyRequestSchema.safeParse(raw);
 

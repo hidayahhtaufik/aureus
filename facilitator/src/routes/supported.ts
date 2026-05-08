@@ -1,15 +1,11 @@
 import { Hono } from "hono";
-import { ARC_CAIP2, USDC_TOKEN } from "../config/arc.js";
-import type { SupportedResponse } from "../types/x402.js";
+
+import { ARC_CAIP2, USDC_TOKEN, type SupportedResponse } from "@auranode/x402-arc";
 
 export const supportedRoute = new Hono();
 
 /**
  * GET /supported
- *
- * Returns the list of (scheme, network, asset) combinations this facilitator
- * supports. Per x402 spec, this is what x402 clients query to discover
- * facilitator capabilities.
  *
  * v0.1: Arc Testnet + USDC via "exact" scheme (EIP-3009 path).
  */

@@ -12,12 +12,14 @@ vi.mock("../src/lib/arc-client.js", () => ({
 
 import { publicClient } from "../src/lib/arc-client.js";
 import { verifyPayment, type X402PaymentPayload } from "../src/lib/verifier.js";
-import { TRANSFER_WITH_AUTHORIZATION_TYPES } from "../src/lib/eip712.js";
-import { USDC_EIP712_DOMAIN, USDC_TOKEN, ARC_CAIP2 } from "../src/config/arc.js";
-import type {
-  Eip3009Authorization,
-  PaymentRequirements,
-} from "../src/types/x402.js";
+import {
+  TRANSFER_WITH_AUTHORIZATION_TYPES,
+  USDC_EIP712_DOMAIN,
+  USDC_TOKEN,
+  ARC_CAIP2,
+  type Eip3009Authorization,
+  type PaymentRequirements,
+} from "@auranode/x402-arc";
 
 // Anvil dev key #0 — public, never for real funds.
 const TEST_PRIVATE_KEY: Hex =
@@ -96,9 +98,7 @@ describe("verifyPayment — happy path", () => {
     const payload = await buildPayload(auth);
     const requirements = freshRequirements();
 
-    // Stub: balanceOf returns 10 USDC (way more than 1 USDC required)
     mockedReadContract.mockResolvedValueOnce(10_000_000n);
-    // Stub: authorizationState returns false (nonce unused)
     mockedReadContract.mockResolvedValueOnce(false);
 
     const result = await verifyPayment(payload, requirements);
@@ -115,7 +115,6 @@ describe("verifyPayment — rejection paths", () => {
   it("rejects unsupported outer scheme", async () => {
     const auth = freshAuth();
     const payload = await buildPayload(auth, { scheme: "exact" });
-    // Force the wrong scheme directly on the object after building
     (payload as { scheme: string }).scheme = "permit2";
     const result = await verifyPayment(payload, freshRequirements());
     expect(result.ok).toBe(false);
@@ -189,7 +188,6 @@ describe("verifyPayment — rejection paths", () => {
   it("rejects a tampered message (signature recovers to wrong address)", async () => {
     const auth = freshAuth();
     const payload = await buildPayload(auth);
-    // Tamper: change value after signing
     payload.payload.authorization = { ...auth, value: "9999999" };
 
     const result = await verifyPayment(payload, freshRequirements());
@@ -205,7 +203,6 @@ describe("verifyPayment — rejection paths", () => {
     const auth = freshAuth();
     const payload = await buildPayload(auth);
 
-    // Balance 0 — insufficient
     mockedReadContract.mockResolvedValueOnce(0n);
 
     const result = await verifyPayment(payload, freshRequirements());
@@ -217,8 +214,8 @@ describe("verifyPayment — rejection paths", () => {
     const auth = freshAuth();
     const payload = await buildPayload(auth);
 
-    mockedReadContract.mockResolvedValueOnce(10_000_000n); // balance OK
-    mockedReadContract.mockResolvedValueOnce(true); // nonce already used
+    mockedReadContract.mockResolvedValueOnce(10_000_000n);
+    mockedReadContract.mockResolvedValueOnce(true);
 
     const result = await verifyPayment(payload, freshRequirements());
     expect(result.ok).toBe(false);

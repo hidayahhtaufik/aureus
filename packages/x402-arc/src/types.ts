@@ -3,29 +3,40 @@
  *
  * Reference spec:
  *   https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_evm.md
+ *
+ * All schemas are Zod-based for runtime validation at API boundaries.
+ * The inferred TypeScript types are exported for compile-time use.
  */
 
 import { z } from "zod";
 
-// ---- Primitives ----
+// ---- Primitive validators ----
 
-const HexAddress = z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid 0x-prefixed address");
-const HexBytes32 = z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid 0x-prefixed bytes32");
-const HexSignature = z.string().regex(
-  /^0x[a-fA-F0-9]{130}$/,
-  "Invalid 0x-prefixed 65-byte signature"
-);
-const NumericString = z.string().regex(/^\d+$/, "Must be a numeric string (no decimal/sign)");
+export const HexAddressSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid 0x-prefixed address");
+
+export const HexBytes32Schema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{64}$/, "Invalid 0x-prefixed bytes32");
+
+export const HexSignatureSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]{130}$/, "Invalid 0x-prefixed 65-byte signature");
+
+export const NumericStringSchema = z
+  .string()
+  .regex(/^\d+$/, "Must be a numeric string (no decimal/sign)");
 
 // ---- EIP-3009 authorization ----
 
 export const Eip3009AuthorizationSchema = z.object({
-  from: HexAddress,
-  to: HexAddress,
-  value: NumericString,
-  validAfter: NumericString,
-  validBefore: NumericString,
-  nonce: HexBytes32,
+  from: HexAddressSchema,
+  to: HexAddressSchema,
+  value: NumericStringSchema,
+  validAfter: NumericStringSchema,
+  validBefore: NumericStringSchema,
+  nonce: HexBytes32Schema,
 });
 
 export type Eip3009Authorization = z.infer<typeof Eip3009AuthorizationSchema>;
@@ -33,38 +44,42 @@ export type Eip3009Authorization = z.infer<typeof Eip3009AuthorizationSchema>;
 // ---- x402 payment payload (EIP-3009 path) ----
 
 export const PaymentPayloadSchema = z.object({
-  signature: HexSignature,
+  signature: HexSignatureSchema,
   authorization: Eip3009AuthorizationSchema,
 });
 
 export type PaymentPayload = z.infer<typeof PaymentPayloadSchema>;
 
-// ---- x402 PaymentRequirements (what the seller demands) ----
+// ---- x402 PaymentRequirements ----
 
 export const PaymentRequirementsSchema = z.object({
   scheme: z.literal("exact"),
   network: z.string(),
-  maxAmountRequired: NumericString,
+  maxAmountRequired: NumericStringSchema,
   resource: z.string(),
   description: z.string().optional(),
   mimeType: z.string().optional(),
   outputSchema: z.unknown().optional(),
-  payTo: HexAddress,
+  payTo: HexAddressSchema,
   maxTimeoutSeconds: z.number().int().positive(),
-  asset: HexAddress,
+  asset: HexAddressSchema,
   extra: z.unknown().optional(),
 });
 
 export type PaymentRequirements = z.infer<typeof PaymentRequirementsSchema>;
 
-// ---- /verify and /settle request body ----
+// ---- /verify and /settle request envelope ----
 
-const X402PaymentPayloadEnvelopeSchema = z.object({
+export const X402PaymentPayloadEnvelopeSchema = z.object({
   x402Version: z.number().int().positive(),
   scheme: z.literal("exact"),
   network: z.string(),
   payload: PaymentPayloadSchema,
 });
+
+export type X402PaymentPayloadEnvelope = z.infer<
+  typeof X402PaymentPayloadEnvelopeSchema
+>;
 
 export const VerifyRequestSchema = z.object({
   x402Version: z.number().int().positive(),

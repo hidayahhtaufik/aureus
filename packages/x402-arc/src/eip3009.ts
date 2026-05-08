@@ -1,11 +1,12 @@
 /**
- * EIP-3009 helpers — signature decoding for `transferWithAuthorization` calls.
+ * EIP-3009 helpers — signature decode + nonce generation.
  *
  * USDC v2's `transferWithAuthorization` takes signature as separate v, r, s
- * parameters (not as a single bytes blob). This module decomposes the 65-byte
- * compact signature into those three components.
+ * parameters (not a single bytes blob). This module decomposes the 65-byte
+ * compact signature accordingly.
  */
 
+import { keccak256, toHex } from "viem";
 import type { Hex } from "viem";
 
 export type DecodedSignature = {
@@ -42,14 +43,23 @@ export function decodeSignature(signature: Hex): DecodedSignature {
     throw new Error("Could not parse v byte from signature");
   }
 
-  // Normalize v: some signers produce {0, 1}; transferWithAuthorization wants {27, 28}.
-  if (v < 27) {
-    v += 27;
-  }
+  if (v < 27) v += 27;
 
   if (v !== 27 && v !== 28) {
     throw new Error(`Invalid v value after normalization: ${v}`);
   }
 
   return { r, s, v };
+}
+
+/**
+ * Generate a cryptographically random bytes32 nonce for EIP-3009 authorizations.
+ *
+ * @param seed Optional string mixed into the entropy for deterministic test fixtures.
+ */
+export function randomNonce(seed?: string): Hex {
+  const data = seed
+    ? `${seed}-${Date.now()}-${Math.random()}`
+    : `x402-arc-${Date.now()}-${Math.random()}-${Math.random()}`;
+  return keccak256(toHex(data));
 }

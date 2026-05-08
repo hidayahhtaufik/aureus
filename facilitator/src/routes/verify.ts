@@ -1,24 +1,21 @@
 import { Hono } from "hono";
 
-import { VerifyRequestSchema } from "../types/x402.js";
-import type { VerifyResponse } from "../types/x402.js";
-import { verifyPayment } from "../lib/verifier.js";
-import type { X402PaymentPayload } from "../lib/verifier.js";
+import {
+  VerifyRequestSchema,
+  type VerifyResponse,
+} from "@auranode/x402-arc";
+
+import { verifyPayment, type X402PaymentPayload } from "../lib/verifier.js";
 
 export const verifyRoute = new Hono();
 
 /**
  * POST /verify
  *
- * Validates an x402 payment payload off-chain (signature recovery, balance
- * lookup, nonce check, time window, etc.) WITHOUT broadcasting a transaction.
- *
- * Per x402 spec, sellers SHOULD NOT fully trust /verify alone — only /settle
- * proves on-chain settlement. /verify is a fast pre-check to reject obviously
- * invalid payloads before requesting settlement.
+ * Validates an x402 payment payload off-chain (signature recovery, balance,
+ * nonce, time, amount checks). No on-chain broadcast.
  */
 verifyRoute.post("/", async (c) => {
-  // Parse + validate body shape
   const raw = await c.req.json().catch(() => null);
   const parsed = VerifyRequestSchema.safeParse(raw);
 
@@ -32,7 +29,6 @@ verifyRoute.post("/", async (c) => {
 
   const { paymentPayload, paymentRequirements } = parsed.data;
 
-  // Cast to internal verifier type. Schema already guarantees shape.
   const outerPayload: X402PaymentPayload = {
     x402Version: paymentPayload.x402Version,
     scheme: paymentPayload.scheme,
@@ -40,7 +36,6 @@ verifyRoute.post("/", async (c) => {
     payload: paymentPayload.payload,
   };
 
-  // Run all verification checks
   const result = await verifyPayment(outerPayload, paymentRequirements);
 
   if (result.ok) {
@@ -51,7 +46,6 @@ verifyRoute.post("/", async (c) => {
     return c.json(response, 200);
   }
 
-  // result.ok === false
   const response: VerifyResponse = result.payer
     ? { isValid: false, invalidReason: result.invalidReason, payer: result.payer }
     : { isValid: false, invalidReason: result.invalidReason };

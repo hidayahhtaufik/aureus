@@ -1,13 +1,13 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { arcTestnet } from "../config/arc.js";
+import { arcTestnet, ARC_TESTNET_RPC } from "@auranode/x402-arc";
 
 /**
  * Public client for read-only Arc testnet calls.
  */
 export const publicClient = createPublicClient({
   chain: arcTestnet,
-  transport: http(process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network"),
+  transport: http(process.env.ARC_RPC_URL ?? ARC_TESTNET_RPC),
 });
 
 /**
@@ -27,6 +27,6 @@ export function getWalletClient() {
   return createWalletClient({
     account,
     chain: arcTestnet,
-    transport: http(process.env.ARC_RPC_URL ?? "https://rpc.testnet.arc.network"),
+    transport: http(process.env.ARC_RPC_URL ?? ARC_TESTNET_RPC),
   });
 }

@@ -6,9 +6,9 @@ import {
   recoverEip3009Signer,
   signerMatchesAuthorizer,
   TRANSFER_WITH_AUTHORIZATION_TYPES,
-} from "../src/lib/eip712.js";
-import { USDC_EIP712_DOMAIN } from "../src/config/arc.js";
-import type { Eip3009Authorization } from "../src/types/x402.js";
+  USDC_EIP712_DOMAIN,
+  type Eip3009Authorization,
+} from "@auranode/x402-arc";
 
 // Anvil's well-known dev private key #0 — public, NEVER use for real funds.
 const TEST_PRIVATE_KEY: Hex =
@@ -52,7 +52,6 @@ describe("recoverEip3009Signer", () => {
   });
 
   it("rejects a signature with the wrong byte length", async () => {
-    // 130 chars (instead of 132) — 64 bytes instead of 65
     const tooShort = `0x${"00".repeat(64)}` as Hex;
     const result = await recoverEip3009Signer(SAMPLE_AUTH, tooShort);
 
@@ -65,12 +64,9 @@ describe("recoverEip3009Signer", () => {
   it("recovers a different address when the message has been tampered with", async () => {
     const sig = await signAuth(SAMPLE_AUTH);
 
-    // Tamper: change the `value` field after signing
     const tamperedAuth: Eip3009Authorization = { ...SAMPLE_AUTH, value: "9999999" };
     const result = await recoverEip3009Signer(tamperedAuth, sig);
 
-    // Recovery succeeds (signature is well-formed) but recovers to a different
-    // address than TEST_ACCOUNT — proving tampering is detectable downstream.
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.signer.toLowerCase()).not.toBe(

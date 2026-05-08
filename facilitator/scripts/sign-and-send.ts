@@ -1,29 +1,13 @@
 /**
  * Day 7 — End-to-End test driver.
  *
- * Behavior:
- *   1. Reads BUYER_PRIVATE_KEY (signs the EIP-3009 authorization)
- *      and RECIPIENT_ADDRESS (the seller / who receives the USDC).
- *   2. Queries the buyer's USDC balance on Arc testnet.
- *   3. Builds and signs an EIP-712 TransferWithAuthorization message
- *      using the same domain the verifier expects.
- *   4. POSTs the x402 payment payload to:
- *        - /verify   (read-only signature + balance + nonce check)
- *        - /settle   (broadcasts transferWithAuthorization on-chain)
- *   5. Prints the tx hash + Arcscan link if settle succeeds.
+ * Reads BUYER_PRIVATE_KEY (signs the EIP-3009 authorization) and
+ * RECIPIENT_ADDRESS (seller address). POSTs to the running facilitator's
+ * /verify and /settle endpoints. Prints the on-chain tx hash if successful.
  *
  * Run:
  *   npm run dev         # in one terminal
  *   npm run send        # in another terminal
- *
- * Required env (in facilitator/.env):
- *   BUYER_PRIVATE_KEY        — 0x-prefixed 32-byte hex (testnet wallet with USDC)
- *   FACILITATOR_PRIVATE_KEY  — same or different wallet; pays gas to broadcast
- *   RECIPIENT_ADDRESS        — 0x-prefixed; can equal buyer for self-transfer test
- *
- * Optional env:
- *   FACILITATOR_URL  (default http://localhost:8402)
- *   VALUE_USDC       (default "0.01" — i.e., 0.01 USDC)
  */
 
 import "dotenv/config";
@@ -33,20 +17,19 @@ import { privateKeyToAccount } from "viem/accounts";
 
 import {
   arcTestnet,
-  USDC_EIP712_DOMAIN,
-  USDC_TOKEN,
   ARC_CAIP2,
-} from "../src/config/arc.js";
-import { TRANSFER_WITH_AUTHORIZATION_TYPES } from "../src/lib/eip712.js";
-import { USDC_ABI } from "../src/lib/usdc-abi.js";
+  USDC_TOKEN,
+  USDC_EIP712_DOMAIN,
+  TRANSFER_WITH_AUTHORIZATION_TYPES,
+} from "@auranode/x402-arc";
 
-// ---- Env parsing ----
+import { USDC_ABI } from "../src/lib/usdc-abi.js";
 
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v || v.trim() === "") {
     console.error(`\n❌ Missing required env: ${name}`);
-    console.error(`   Set it in facilitator/.env and try again.\n`);
+    console.error("   Set it in facilitator/.env and try again.\n");
     process.exit(1);
   }
   return v;
@@ -57,8 +40,6 @@ const RECIPIENT_ADDRESS = requireEnv("RECIPIENT_ADDRESS") as Hex;
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "http://localhost:8402";
 const VALUE_USDC_STR = process.env.VALUE_USDC ?? "0.01";
 
-// ---- Wallet + client setup ----
-
 const buyer = privateKeyToAccount(BUYER_PRIVATE_KEY);
 const recipient = getAddress(RECIPIENT_ADDRESS);
 
@@ -67,14 +48,9 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-// ---- Helpers ----
-
 function usdcToAtomic(decimalString: string): bigint {
-  // Parse a decimal USDC string (e.g., "0.01") into atomic units (6 decimals).
   if (!/^\d+(\.\d{1,6})?$/.test(decimalString)) {
-    throw new Error(
-      `Invalid USDC amount "${decimalString}". Use up to 6 decimal places.`
-    );
+    throw new Error(`Invalid USDC amount "${decimalString}". Use up to 6 decimal places.`);
   }
   const [whole = "0", fractional = ""] = decimalString.split(".");
   const padded = (fractional + "000000").slice(0, 6);
@@ -88,7 +64,6 @@ function atomicToUsdc(atomic: bigint): string {
 }
 
 function randomNonce(): Hex {
-  // Cryptographically random bytes32; collision-resistant.
   return keccak256(
     toHex(`aureus-day7-${Date.now()}-${Math.random()}-${Math.random()}`)
   );
@@ -102,8 +77,6 @@ function divider(label: string): void {
   console.log(`\n${"━".repeat(8)} ${label} ${"━".repeat(60 - label.length)}`);
 }
 
-// ---- Main ----
-
 async function main(): Promise<void> {
   console.log("🛡️  Aureus Day 7 — End-to-End x402 Settlement Test");
   console.log(`   Buyer:     ${buyer.address}`);
@@ -111,7 +84,6 @@ async function main(): Promise<void> {
   console.log(`   Value:     ${VALUE_USDC_STR} USDC`);
   console.log(`   Facilitator: ${FACILITATOR_URL}`);
 
-  // --- Pre-flight: check buyer balance ---
   divider("PRE-FLIGHT");
   const valueAtomic = usdcToAtomic(VALUE_USDC_STR);
   console.log(`   Atomic units: ${valueAtomic}`);
@@ -132,11 +104,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // --- Build authorization ---
   divider("BUILD + SIGN AUTHORIZATION");
   const now = Math.floor(Date.now() / 1000);
-  const validAfter = BigInt(now - 60); // 1 minute back
-  const validBefore = BigInt(now + 600); // 10 minutes forward
+  const validAfter = BigInt(now - 60);
+  const validBefore = BigInt(now + 600);
   const nonce = randomNonce();
 
   const authorization = {
@@ -164,7 +135,6 @@ async function main(): Promise<void> {
   });
   console.log(`   Signature: ${signature.slice(0, 22)}...${signature.slice(-20)}`);
 
-  // --- Build x402 request body ---
   const body = {
     x402Version: 1,
     paymentPayload: {
@@ -188,7 +158,6 @@ async function main(): Promise<void> {
     },
   };
 
-  // --- Step A: /verify ---
   divider("POST /verify");
   const verifyRes = await fetch(`${FACILITATOR_URL}/verify`, {
     method: "POST",
@@ -201,13 +170,11 @@ async function main(): Promise<void> {
 
   if (!verifyJson.isValid) {
     console.error(
-      `\n❌ /verify rejected the payload: ${verifyJson.invalidReason ?? "unknown reason"}`
+      `\n❌ /verify rejected: ${verifyJson.invalidReason ?? "unknown reason"}`
     );
-    console.error("   Aborting — not calling /settle.\n");
     process.exit(1);
   }
 
-  // --- Step B: /settle ---
   divider("POST /settle");
   console.log("   Broadcasting transferWithAuthorization on Arc testnet...");
   const settleRes = await fetch(`${FACILITATOR_URL}/settle`, {
@@ -226,7 +193,6 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // --- Verify on-chain side effects ---
   divider("ON-CHAIN VERIFICATION");
   const txHash = settleJson.transaction as Hex;
   console.log(`   Tx hash: ${txHash}`);

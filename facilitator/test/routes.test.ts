@@ -10,7 +10,7 @@ vi.mock("../src/lib/arc-client.js", () => ({
 
 import { app } from "../src/app.js";
 import { publicClient } from "../src/lib/arc-client.js";
-import { ARC_CAIP2, USDC_TOKEN } from "../src/config/arc.js";
+import { ARC_CAIP2, USDC_TOKEN } from "@auranode/x402-arc";
 
 const mockedReadContract = vi.mocked(publicClient.readContract);
 
@@ -62,7 +62,7 @@ describe("POST /verify — body validation", () => {
     const res = await app.request("/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ x402Version: 1 }), // missing paymentPayload, paymentRequirements
+      body: JSON.stringify({ x402Version: 1 }),
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { isValid: boolean; invalidReason: string };
@@ -81,7 +81,7 @@ describe("POST /verify — body validation", () => {
           scheme: "exact",
           network: ARC_CAIP2,
           payload: {
-            signature: "0x1234", // too short
+            signature: "0x1234",
             authorization: {
               from: "0x1111111111111111111111111111111111111111",
               to: "0x2222222222222222222222222222222222222222",
@@ -128,5 +128,4 @@ describe("404 handler", () => {
   });
 });
 
-// Quiet the linter — mocked client is imported but referenced only for typing.
 void mockedReadContract;

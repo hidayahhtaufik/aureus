@@ -1,0 +1,26 @@
+{
+  "name": "aureus-monorepo",
+  "version": "0.1.0",
+  "description": "Aureus Protocol — TalosFacilitator (x402 for Arc Network) and shared SDK.",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "facilitator",
+    "examples/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "auranode.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hidayahhtaufik/aureus"
+  }
+}

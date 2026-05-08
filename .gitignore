@@ -18,3 +18,19 @@ docs/
 .env
 .env.*
 !.env.example
+
+# Editor backups / swap files
+*.save
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node / workspaces
+node_modules/
+*.log
+
+# Build output
+dist/
+*.tsbuildinfo

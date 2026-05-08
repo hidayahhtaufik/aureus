@@ -1,21 +1,17 @@
 /**
- * Demo seller — a small Express server with one paid endpoint.
+ * Demo seller — small Express server with one paid endpoint.
  *
  * Endpoints:
  *   GET  /                — server info (free)
  *   GET  /health          — health check (free)
  *   GET  /api/weather     — paid endpoint, costs PRICE_USDC USDC per request
- *
- * The paid endpoint is gated by the Aureus x402 middleware, which calls our
- * TalosFacilitator's /verify and /settle to validate buyer payments before
- * returning content.
  */
 
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
 
-import { createX402Middleware } from "./x402-middleware.js";
+import { createX402Middleware } from "@auranode/x402-arc/server";
 
 const PORT = Number(process.env.PORT ?? 8403);
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "http://localhost:8402";
@@ -37,7 +33,6 @@ if (
 const app = express();
 app.use(express.json({ limit: "256kb" }));
 
-// Free routes
 app.get("/", (_req: Request, res: Response) => {
   res.json({
     name: "Aureus Demo Seller",
@@ -57,7 +52,7 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ ok: true, timestamp: Date.now() });
 });
 
-// Paid route — protected by Aureus x402 middleware
+// Paid route — protected by Aureus x402 middleware (from @auranode/x402-arc/server)
 const x402 = createX402Middleware({
   facilitatorUrl: FACILITATOR_URL,
   payTo: SELLER_ADDRESS,
@@ -67,7 +62,6 @@ const x402 = createX402Middleware({
 });
 
 app.get("/api/weather", x402, (_req: Request, res: Response) => {
-  // Buyer has already paid — serve the content.
   res.json({
     city: "Jakarta",
     timestamp: new Date().toISOString(),

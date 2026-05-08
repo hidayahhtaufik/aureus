@@ -1,17 +1,12 @@
 /**
  * Demo agent — calls a paid x402 endpoint and auto-pays the 402 challenge.
- *
- * Run:
- *   npm install
- *   cp .env.example .env       (edit BUYER_PRIVATE_KEY + SELLER_URL)
- *   npm run buy
  */
 
 import "dotenv/config";
 import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import { X402Client } from "./x402-client.js";
+import { X402Client } from "@auranode/x402-arc/client";
 
 function requireEnv(name: string): string {
   const v = process.env[name];

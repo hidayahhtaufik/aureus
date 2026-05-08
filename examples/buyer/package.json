@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auranode/x402-arc": "*",
     "viem": "^2.21.55",
     "dotenv": "^16.4.7"
   },

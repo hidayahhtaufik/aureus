@@ -217,18 +217,54 @@ contract HonosTest is Test {
     // Decay
     // ========================================================================
 
-    function test_decay_halvingAtOneHalfLife() public {
+    /// @dev Each decay test gets its OWN setUp() (fresh mint + recordSuccess) to
+    ///      avoid the Foundry quirk where chained vm.warp + view calls within a
+    ///      single function can cause stale block.timestamp reads. One warp per
+    ///      test = clean, deterministic, easy to reason about.
+
+    function test_decay_noTimePassed_returnsBaseRep() public {
         uint256 bondId = _mintBondForAgent(ONE_DAY);
-        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(50)), 100_000_000); // 100 USDC = 100 rep
+        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(50)), 100_000_000);
         honos.recordSuccess(bondId, r);
 
         assertEq(honos.effectiveReputation(bondId), 100);
+    }
 
-        vm.warp(block.timestamp + 1 days); // 1 half-life
+    function test_decay_atOneHalfLife_halves() public {
+        uint256 bondId = _mintBondForAgent(ONE_DAY);
+        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(51)), 100_000_000);
+        honos.recordSuccess(bondId, r);
+
+        vm.warp(block.timestamp + 1 days);
         assertEq(honos.effectiveReputation(bondId), 50);
+    }
 
-        vm.warp(block.timestamp + 1 days); // 2 half-lives
+    function test_decay_atTwoHalfLives_quarters() public {
+        uint256 bondId = _mintBondForAgent(ONE_DAY);
+        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(52)), 100_000_000);
+        honos.recordSuccess(bondId, r);
+
+        vm.warp(block.timestamp + 2 days);
         assertEq(honos.effectiveReputation(bondId), 25);
+    }
+
+    function test_decay_atThreeHalfLives() public {
+        uint256 bondId = _mintBondForAgent(ONE_DAY);
+        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(53)), 100_000_000);
+        honos.recordSuccess(bondId, r);
+
+        vm.warp(block.timestamp + 3 days);
+        assertEq(honos.effectiveReputation(bondId), 12); // 100 >> 3 = 12
+    }
+
+    function test_decay_partialPeriodReturnsBaseRep() public {
+        // Less than one half-life elapsed → no decay yet.
+        uint256 bondId = _mintBondForAgent(ONE_DAY);
+        IActa.Receipt memory r = _emitReceipt(bytes32(uint256(54)), 100_000_000);
+        honos.recordSuccess(bondId, r);
+
+        vm.warp(block.timestamp + 12 hours);
+        assertEq(honos.effectiveReputation(bondId), 100);
     }
 
     function test_decay_zeroAfterManyHalvings() public {

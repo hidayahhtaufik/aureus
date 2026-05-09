@@ -2,23 +2,26 @@
 
 > The golden standard for autonomous agent commerce on Arc Network.
 
-**Status:** v0.1 Week 1 sprint **COMPLETE** — first community x402 facilitator for Arc Network is live and proven on-chain.
+**Status:** v0.1 — first community x402 facilitator for Arc Network. Live in production.
 
+**Public facilitator:** https://aureus.auranode.xyz
 **Builder:** [auranode.xyz](https://auranode.xyz)
 **Network:** Arc Testnet (chain ID `5042002`)
 
 ---
 
-## 🏆 Milestone — First on-chain x402 settlement on Arc
+## 🏆 Milestones
 
-**Date:** 2026-05-08
+### First on-chain x402 settlement on Arc (2026-05-08)
+[`0x401ff573...136f`](https://testnet.arcscan.app/tx/0x401ff57311fe103e7215a26490d6c8ee6cc91604688e450f2fccc7f12daf136f) — local facilitator end-to-end test.
 
-**Tx hash:** [`0x401ff57311fe103e7215a26490d6c8ee6cc91604688e450f2fccc7f12daf136f`](https://testnet.arcscan.app/tx/0x401ff57311fe103e7215a26490d6c8ee6cc91604688e450f2fccc7f12daf136f)
+### First settlement via public facilitator (2026-05-09)
+[`0x473d4278...38a8`](https://testnet.arcscan.app/tx/0x473d4278e5f15eec18bbe8dd3bc4057f8f4339af41fea67374c282e5e33838a8) — full HTTPS + Nginx + Let's Encrypt + Docker stack.
 
-- 0.01 USDC transferred via `transferWithAuthorization`
-- ~$0.0019 gas cost (USDC-as-gas confirmed)
+### Per-tx economics
+- 0.01 USDC transferred + ~$0.0019 gas = $0.0119 total
 - Sub-second confirmation (Malachite BFT)
-- Buyer signed off-chain, facilitator broadcasted, atomic settlement
+- USDC-as-gas thesis confirmed
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "name": "@hidayahhtaufik/x402-arc-demo-buyer",
+  "version": "0.1.0",
+  "description": "Demo agent that auto-pays x402-protected endpoints on Arc",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "buy": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hidayahhtaufik/x402-arc": "*",
+    "viem": "^2.21.55",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

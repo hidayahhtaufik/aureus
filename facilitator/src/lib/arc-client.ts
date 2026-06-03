@@ -2,21 +2,25 @@ import { createPublicClient, createWalletClient, fallback, http, type Transport 
 import { privateKeyToAccount } from "viem/accounts";
 import { arcTestnet, ARC_TESTNET_RPC } from "@hidayahhtaufik/x402-arc";
 
+// ARC_RPC_URL may be a comma-separated POOL of endpoints. Dedupe and append the
+// package default as a last resort. Computed once at boot; logged so a redeploy
+// can confirm how many endpoints actually loaded (grep "RPC pool" in the logs).
+const rpcUrls = [
+  ...(process.env.ARC_RPC_URL ?? ARC_TESTNET_RPC).split(",").map((u) => u.trim()).filter(Boolean),
+  ARC_TESTNET_RPC,
+].filter((u, i, a) => a.indexOf(u) === i);
+
+console.log(`[arc-client] RPC pool: ${rpcUrls.length} endpoint(s)`);
+
 /**
- * RPC transport. ARC_RPC_URL may be a comma-separated POOL of endpoints — we
- * build a viem fallback() across all of them (plus the package default as a
- * last resort), each with retries (viem backs off on 429). One provider hitting
- * its rate limit fails over to the next instead of failing the balance lookup
- * or the settle broadcast.
+ * RPC transport. Builds a viem fallback() across the pool, each http() with
+ * retries (viem backs off on 429). One provider hitting its rate limit fails
+ * over to the next instead of failing the balance lookup or the settle broadcast.
  */
 function arcTransport(): Transport {
-  const urls = [
-    ...(process.env.ARC_RPC_URL ?? ARC_TESTNET_RPC).split(",").map((u) => u.trim()).filter(Boolean),
-    ARC_TESTNET_RPC,
-  ].filter((u, i, a) => a.indexOf(u) === i);
-  return urls.length === 1
-    ? http(urls[0], { retryCount: 3 })
-    : fallback(urls.map((u) => http(u, { retryCount: 3 })));
+  return rpcUrls.length === 1
+    ? http(rpcUrls[0], { retryCount: 3 })
+    : fallback(rpcUrls.map((u) => http(u, { retryCount: 3 })));
 }
 
 /**

@@ -14,7 +14,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8402
-      ARC_RPC_URL: https://rpc.testnet.arc.network
+      # ARC_RPC_URL (comma-separated RPC pool for failover) lives in
+      # facilitator/.env, NOT here. A value in this block would override
+      # env_file and keep the Alchemy key out of git is the whole point.
 
     # FACILITATOR_PRIVATE_KEY lives ONLY in this file on the server,
     # never committed to the repo (.env is in .gitignore).
